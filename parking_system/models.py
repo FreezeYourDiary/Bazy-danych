@@ -245,3 +245,20 @@ class Uzytkownik(models.Model):
     class Meta:
         managed = False
         db_table = 'uzytkownik'
+
+
+from rest_framework import serializers
+from .models import Site, Parking
+
+class SiteSerializer(serializers.ModelSerializer):
+    parkings = serializers.SerializerMethodField()  # Custom field for parking names
+
+    class Meta:
+        model = Site
+        fields = ['id', 'nazwa', 'ulica', 'kod_pocztowy', 'nr_posesji', 'parkings']
+
+    def get_parkings(self, obj):
+        # Get all parkings for this site and return only the 'nazwa' field
+        parkings = Parking.objects.filter(site=obj)
+        return [parking.nazwa for parking in parkings]
+
