@@ -85,7 +85,7 @@ class AuthUserUserPermissions(models.Model):
 
 
 class Cennik(models.Model):
-    parking = models.ForeignKey('Parking', models.DO_NOTHING, db_column='Parking_id')  # Field name made lowercase.
+    parking = models.ForeignKey('Parking', models.DO_NOTHING, db_column='Parking_id')
     cena = models.FloatField()
 
     class Meta:
@@ -161,15 +161,19 @@ class ParkingSpot(models.Model):
     parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')  # Field name made lowercase.
     strefa = models.CharField(max_length=255)
     atrybut = models.ForeignKey(Atrybuty, models.DO_NOTHING, db_column='atrybut')
-
+    status = models.CharField(max_length=20, default="dostępne")  # Available, Blocked
     class Meta:
-        managed = False
+        managed = True
         db_table = 'parking_spot'
 
 
 class Platnosc(models.Model):
-    pojazd = models.ForeignKey('SpotUsage', models.DO_NOTHING)
-    uzytkownik = models.ForeignKey('Uzytkownik', models.DO_NOTHING)
+    # pojazd = models.ForeignKey('SpotUsage', models.DO_NOTHING)
+    # uzytkownik = models.ForeignKey('Uzytkownik', models.DO_NOTHING)
+
+    # foreign key to rezerwacja not pojazd/uzytkownik
+    rezerwacja = models.ForeignKey('Rezerwacja', models.DO_NOTHING)
+
     kwota = models.FloatField(blank=True, null=True)
     data_oplaty = models.DateField(blank=True, null=True)
     metoda_platnosci = models.CharField(max_length=16)
@@ -189,8 +193,8 @@ class Pojazd(models.Model):
 
 
 class Rezerwacja(models.Model):
-    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')  # Field name made lowercase.
-    spot = models.ForeignKey(ParkingSpot, models.DO_NOTHING, db_column='Spot_id')  # Field name made lowercase.
+    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')
+    spot = models.ForeignKey(ParkingSpot, models.DO_NOTHING, db_column='Spot_id')
     uzytkownik = models.ForeignKey('Uzytkownik', models.DO_NOTHING)
     data_rezerwacji = models.DateField(blank=True, null=True)
     czas_rozpoczecia = models.DateTimeField(blank=True, null=True)
@@ -204,7 +208,7 @@ class Rezerwacja(models.Model):
 
 
 class Site(models.Model):
-    parking_owner = models.ForeignKey(ParkingOwner, models.DO_NOTHING, db_column='Parking_Owner_id')  # Field name made lowercase.
+    parking_owner = models.ForeignKey(ParkingOwner, models.DO_NOTHING, db_column='Parking_Owner_id')
     nazwa = models.CharField(max_length=255)
     ulica = models.CharField(max_length=255, blank=True, null=True)
     kod_pocztowy = models.CharField(max_length=8, blank=True, null=True)
@@ -216,8 +220,9 @@ class Site(models.Model):
 
 
 class SpotUsage(models.Model):
-    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')  # Field name made lowercase.
-    spot = models.ForeignKey(ParkingSpot, models.DO_NOTHING, db_column='Spot_id')  # Field name made lowercase.
+    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')
+    spot = models.ForeignKey(ParkingSpot, models.DO_NOTHING, db_column='Spot_id')
+    rezerwacja = models.ForeignKey(Rezerwacja, models.DO_NOTHING, db_column='Rezerwacja_id', null=True, blank=True)
     id = models.CharField(primary_key=True, max_length=64)
     start_data = models.DateTimeField(blank=True, null=True)
     end_data = models.DateTimeField(blank=True, null=True)
@@ -227,6 +232,7 @@ class SpotUsage(models.Model):
     class Meta:
         managed = False
         db_table = 'spot_usage'
+
 
 
 class Uzytkownik(models.Model):
