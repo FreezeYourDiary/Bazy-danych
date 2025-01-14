@@ -1,6 +1,62 @@
 from django.shortcuts import render
-from .models import ParkingSpot
+from .models import ParkingSpot, Cennik, Rezerwacja, Platnosc, Site, Parking, Uzytkownik
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Q, F
 from rest_framework.decorators import api_view
+
+''' HOME PAGE REQUESTS'''
+@api_view(['GET'])
+def available_parking_spots_for_site(request, site_id):
+    try:
+        # wszystkie parkingi pod site
+        parkings = Parking.objects.filter(site_id=site_id)
+
+        available_spots = ParkingSpot.objects.filter(parking__in=parkings, status="dostępne").count()
+
+        return Response({"site_id": site_id, "available_spots": available_spots})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+def search_parking(request):
+    query = request.GET.get('query', '').strip()
+    if not query:
+        return Response({"error": "Brak zapytania."}, status=400)
+    try:
+        site = Site.objects.filter(
+            Q(nazwa__icontains=query) |
+            Q(ulica__icontains=query) |
+            Q(kod_pocztowy__icontains=query)
+        ).first()
+
+        if site:
+            parking = Parking.objects.filter(site=site).first()
+            if parking:
+                return Response({"parking_id": parking.id})
+        return Response({"error": "Nie znaleziono parkingu."}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+def autocomplete_sites(request):
+    query = request.GET.get('query', '').strip()
+    if not query:
+        return Response({"results": []})  # puste zapytanie??
+
+    try:
+        # filtracja podobienstwa
+        sites = Site.objects.filter(
+            Q(nazwa__icontains=query) |
+            Q(ulica__icontains=query) |
+            Q(kod_pocztowy__icontains=query)
+        ).values('id', 'nazwa', 'ulica', 'kod_pocztowy')[:10]
+
+        return Response({"results": list(sites)})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 
 @api_view(['POST'])
@@ -61,10 +117,6 @@ def update_parking_owner(request, site_id):
         })
 
 
-from rest_framework.decorators import api_view
-from .models import Cennik
-
-
 @api_view(['POST'])
 def update_parking_price(request, parking_id):
     """
@@ -91,10 +143,6 @@ def update_parking_price(request, parking_id):
             "status": "error",
             "message": f"Nie udalo sie zmienic ceny dla {parking_id}."
         })
-
-
-from rest_framework.decorators import api_view
-from .models import Rezerwacja
 
 
 # http://localhost:8000/api/reservations/?status=Wygasla
@@ -151,14 +199,6 @@ def earnings_statistics(request):
         "status": "success",
         "total_earnings": total_earnings
     })
-
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from .models import Platnosc
-from django.db.models import F
-
-
 @api_view(['GET'])
 def user_statistics(request, user_id):
     platnosci = Platnosc.objects.filter(rezerwacja__uzytkownik_id=user_id).values(
@@ -195,46 +235,6 @@ def check_spot_availability(request, parking_id):
             "message": "Brak dostępnych miejsc."
         })
 
-
-from .models import Site, Parking
-
-from .models import SiteSerializer
-
-
-@api_view(['GET'])
-def list_sites(request):
-    """
-    Zwróć listę wszystkich miejsc oraz ich dostępne parkingi.
-    """
-    site_id = request.GET.get('id', None)
-
-    if site_id:
-        # Filter sites by id
-        sites = Site.objects.filter(id=site_id)
-    else:
-        # Get all sites
-        sites = Site.objects.all()
-
-    # Serialize the site data along with the parkings
-    serializer = SiteSerializer(sites, many=True)
-
-    return Response(serializer.data)
-
-
 def home(request):
     return render(request, 'parking_system/home.html')
 
-# html test for future
-
-# def home(request):
-#     # Fetch all parking spots and owners
-#     parking_spots = ParkingSpot.objects.all()
-#     parking_owners = ParkingOwner.objects.all()
-#
-#     # Pass the data to the template
-#     context = {
-#         'parking_spots': parking_spots,
-#         'parking_owners': parking_owners
-#     }
-#
-#     return render(request, 'home.html', context)
