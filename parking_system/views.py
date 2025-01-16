@@ -7,17 +7,55 @@ from django.db.models import Q, F
 from rest_framework.decorators import api_view
 
 ''' HOME PAGE REQUESTS'''
+# views.py
 @api_view(['GET'])
-def available_parking_spots_for_site(request, site_id):
+def available_parking_spots_with_filters(request, site_id):
     try:
-        # wszystkie parkingi pod site
-        parkings = Parking.objects.filter(site_id=site_id)
+    # lista filtrow
+        filters = request.GET.getlist('filters')
+        print(f"Received filters: {filters}")
+
+        site = Site.objects.get(id=site_id)
+        parkings = Parking.objects.filter(site=site)
+
+        filter_conditions = Q()
+        if 'podziemny' in filters:
+            filter_conditions &= Q(nazwa__icontains='podziemny') # do debugu
+            print("Filter condition for podziemny added")
+        if 'pracownikow' in filters:
+            filter_conditions &= Q(nazwa__icontains='pracownikow')
+            print("Filter condition for pracownikow added")
+        if 'ciezarowych' in filters:
+            filter_conditions &= Q(nazwa__icontains='ciezarowych')
+            print("Filter condition for ciezarowych added")
+
+        print(f"Filter conditions: {filter_conditions}")
+
+        parkings = parkings.filter(filter_conditions)
+
+        print(f"Filtered parking spots: {parkings}")
 
         available_spots = ParkingSpot.objects.filter(parking__in=parkings, status="dostępne").count()
-
-        return Response({"site_id": site_id, "available_spots": available_spots})
+        prices = {}
+        for parking in parkings:
+            try:
+                cennik = Cennik.objects.get(parking=parking)
+                prices[parking.id] = cennik.cena
+            except Cennik.DoesNotExist:
+                prices[parking.id] = "Cena niedostępna"
+        if available_spots > 0:
+            return Response({
+                "site_id": site_id,
+                "available_spots": available_spots,
+                "prices": prices  # Add the price information
+            })
+        else:
+            return Response({"message": "Brak dostępnych miejsc dla wybranych filtrów."}, status=404)
+    except Site.DoesNotExist:
+        return Response({"message": "Nie znaleziono podanego parku."}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
 
 @api_view(['GET'])
 def search_parking(request):
@@ -237,4 +275,7 @@ def check_spot_availability(request, parking_id):
 
 def home(request):
     return render(request, 'parking_system/home.html')
+def login_signup(request):
+    return render(request, 'parking_system/login-signup.html')
+
 

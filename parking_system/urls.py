@@ -2,9 +2,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.home, name='home'),  # Homepage
-    path('api/available-parking-spots-for-site/<int:site_id>/', views.available_parking_spots_for_site,
-         name='available_parking_spots_for_site'),
+    path('', views.home, name='home'),
+    path('login-signup/', views.login_signup, name='login_signup'),
+    path('api/available-parking-spots-with-filters/<int:site_id>/', views.available_parking_spots_with_filters,
+         name='available_parking_spots_with_filters'),
     path('api/search-parking/', views.search_parking, name='search_parking'),
     path('api/autocomplete-sites/', views.autocomplete_sites, name='autocomplete_sites'),
 

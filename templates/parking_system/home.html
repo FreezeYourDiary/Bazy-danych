@@ -1,42 +1,28 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Rezerwacji Parkingu</title>
-    <style>
-        /* naprawic sytuacje z rozjechaniem css */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-        .autocomplete-suggestions {
-            border: 1px solid #ccc;
-            background: #fff;
-            max-height: 150px;
-            overflow-y: auto;
-            position: absolute;
-            z-index: 1000;
-            width: 300px;
-        }
-        .autocomplete-suggestion {
-            padding: 8px;
-            cursor: pointer;
-        }
-        .autocomplete-suggestion:hover {
-            background-color: #f0f0f0;
-        }
-    </style>
-</head>
-<body>
-    <h1>Wyszukaj Parking</h1>
-    <input type="text" id="searchInput" placeholder="Wprowadź nazwę, ulicę lub kod pocztowy" style="width: 300px; padding: 8px;">
-    <div id="suggestions" class="autocomplete-suggestions"></div>
+{% extends "parking_system/navigate.html" %}
 
-    <button id="checkAvailabilityButton" style="margin-top: 20px; padding: 10px 20px; cursor: pointer; background-color: #1b7d40; color: white;">Sprawdź dostępność</button>
+{% block title %}Home{% endblock %}
 
-    <div id="statusMessage" style="margin-top: 20px; font-weight: bold;"></div>
-    <script src="static/home.js"></script>
-</body>
-</html>
+{% block content %}
+<h1>Wyszukaj Parking</h1>
+<input type="text" id="searchInput" placeholder="Wprowadź nazwę, ulicę lub kod pocztowy" style="width: 300px; padding: 8px;">
+<div id="suggestions" class="autocomplete-suggestions"></div>
+
+<button id="checkAvailabilityButton" class = button>Sprawdź dostępność</button>
+<div id="checkboxContainer" style="margin-top: 20px;">
+    <h3>Opcje filtrowania:</h3>
+    <label>
+        <input type="checkbox" class="filterCheckbox" value="podziemny">
+        Parking podziemny
+    </label><br>
+    <label>
+        <input type="checkbox" class="filterCheckbox" value="dla pracowników">
+        Parking dla pracowników
+    </label><br>
+    <label>
+        <input type="checkbox" class="filterCheckbox" value="dla samochodów ciężarowych">
+        Parking dla samochodów ciężarowych
+    </label>
+</div>
+<div id="statusMessage" style="margin-top: 20px; font-weight: bold;"></div>
+<script src="static/home.js"></script>
+{% endblock %}

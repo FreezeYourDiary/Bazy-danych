@@ -1,0 +1,17 @@
+{% extends "parking_system/navigate.html" %}
+
+{% block title %}Login / Sign Up{% endblock %}
+
+{% block content %}
+<h1>Login or Sign Up</h1>
+<form action="/auth" method="post">
+    {% csrf_token %}
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required>
+
+    <button type="submit">Submit</button>
+</form>
+{% endblock %}
