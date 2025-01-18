@@ -5,6 +5,7 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * !!!!  Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+from django.contrib.auth.hashers import make_password
 from django.db import models
 
 
@@ -158,9 +159,9 @@ class ParkingOwner(models.Model):
 
 
 class ParkingSpot(models.Model):
-    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id')  # Field name made lowercase.
+    parking = models.ForeignKey(Parking, models.DO_NOTHING, db_column='Parking_id', default='1')  # Field name made lowercase.
     strefa = models.CharField(max_length=255)
-    atrybut = models.ForeignKey(Atrybuty, models.DO_NOTHING, db_column='atrybut')
+    atrybut = models.ForeignKey(Atrybuty, models.DO_NOTHING, db_column='atrybut', default='1')
     status = models.CharField(max_length=20, default="dostępne")  # Available, Blocked
     class Meta:
         managed = True
@@ -236,14 +237,19 @@ class SpotUsage(models.Model):
 
 
 class Uzytkownik(models.Model):
-    imie = models.CharField(max_length=255)
-    nazwisko = models.CharField(max_length=255)
-    email = models.CharField(max_length=255, blank=True, null=True)
-    telefon = models.CharField(max_length=255)
-    typ = models.CharField(max_length=255, blank=True, null=True)
+    first_name = models.CharField(max_length=255, db_column='imie')
+    last_name = models.CharField(max_length=255, db_column='nazwisko')
+    email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
+    phone = models.CharField(max_length=255, default='unknown', db_column='telefon')
+    user_type = models.CharField(max_length=255, default='default', db_column='typ')
+    password = models.CharField(max_length=500)
+
+    # def save(self, *args, **kwargs):
+    #     if not self.pk or not self.password.startswith('pbkdf2_'):  # Only hash if new or unhashed
+    #         self.password = make_password(self.password)
+    #     super(Uzytkownik, self).save(*args, **kwargs)
 
     class Meta:
-        managed = False
         db_table = 'uzytkownik'
 
 

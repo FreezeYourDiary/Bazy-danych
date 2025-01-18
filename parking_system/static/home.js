@@ -1,17 +1,14 @@
-// home.js
 const searchInput = document.getElementById('searchInput');
 const suggestionsContainer = document.getElementById('suggestions');
 const checkAvailabilityButton = document.getElementById('checkAvailabilityButton');
 const statusMessage = document.getElementById('statusMessage');
 let selectedSiteId = null;
-
 searchInput.addEventListener('input', async () => {
     const query = searchInput.value.trim();
     if (!query) {
         suggestionsContainer.innerHTML = '';
         return;
     }
-
     try {
         const response = await fetch(`/api/autocomplete-sites/?query=${encodeURIComponent(query)}`);
         const data = await response.json();
@@ -32,17 +29,19 @@ searchInput.addEventListener('input', async () => {
     }
 });
 
+// wybiera proponowa
 function selectSuggestion(id, nazwa) {
     selectedSiteId = id;
     searchInput.value = `${nazwa}`;
     suggestionsContainer.innerHTML = '';
 }
+
 checkAvailabilityButton.addEventListener('click', async () => {
     statusMessage.style.display = 'block';
 
     if (!selectedSiteId) {
         alert('Wybierz parking z listy!');
-        statusMessage.style.display = 'none';  // bez boxa gdy nie wybrano
+        statusMessage.style.display = 'none';  // hide message
         return;
     }
 
@@ -73,7 +72,6 @@ checkAvailabilityButton.addEventListener('click', async () => {
                 let index = 0;
                 for (let parkingId in data.prices) {
                     const price = data.prices[parkingId];
-                    // trzebga fix o nadaniu nazwy strefy
                     const parkingName = parkingNames[index] || `Strefa ${parkingId}`;
                     priceDetails += `<li>Strefa: ${parkingName} - ${price} zł/godz.</li>`;
                     index++;
@@ -81,37 +79,43 @@ checkAvailabilityButton.addEventListener('click', async () => {
                 priceDetails += "</ul>";
                 statusMessage.innerHTML += priceDetails;
             }
+            // prompt redirect na strone rezerwacji
             const reservationPrompt = document.createElement('div');
             reservationPrompt.innerHTML = `
                 <p>Chcesz stworzyć rezerwację?</p>
-                <button id="confirmReservation" class = button>Tak</button>
-                <button id="cancelReservation" class = button>Nie</button>
+                <button id="confirmReservation" class="button">Tak</button>
+                <button id="cancelReservation" class="button">Nie</button>
             `;
             statusMessage.appendChild(reservationPrompt);
 
-            document.getElementById('confirmReservation').addEventListener('click', () => {
-                // podstawowy redirect
-                window.location.href = `/reservation/${selectedSiteId}`;
+            document.getElementById('confirmReservation').addEventListener('click', async () => {
+                try {
+                    const loginStatusResponse = await fetch('/is_logged_in/');
+                    const loginStatusData = await loginStatusResponse.json();
+
+                    if (loginStatusData.logged_in) {
+                        window.location.href = `/konto`;
+                    } else {
+                        alert('Musisz być zalogowany, aby dokonać rezerwacji.');
+                        window.location.href = '/login/';
+                    }
+                } catch (error) {
+                    console.error('Error checking login status:', error);
+                    alert('Wystąpił błąd podczas sprawdzania stanu logowania. Spróbuj ponownie.');
+                }
             });
 
             document.getElementById('cancelReservation').addEventListener('click', () => {
-                statusMessage.innerHTML = ''; // clear w js
+                statusMessage.innerHTML = ''; // Clear the status message
                 statusMessage.style.display = 'none';
             });
 
-        } else if (data.message) {
-            statusMessage.textContent = data.message;
         } else {
-            statusMessage.textContent = 'Wystąpił błąd. Spróbuj ponownie.';
+            statusMessage.textContent = "Brak dostępnych miejsc dla wybranych filtrów.";
         }
     } catch (error) {
-        console.error('Error:', error);
-        statusMessage.textContent = 'Błąd serwera. Spróbuj ponownie.';
+        console.error('Error fetching parking availability:', error);
+        statusMessage.textContent = "Błąd serwera";
     }
+
 });
-
-
-
-
-
-

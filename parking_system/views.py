@@ -1,11 +1,13 @@
 from django.shortcuts import render
-from .models import ParkingSpot, Cennik, Rezerwacja, Platnosc, Site, Parking, Uzytkownik
-from rest_framework.views import APIView
+from .models import ParkingSpot, Cennik, Rezerwacja, Platnosc, Site, Parking, Uzytkownik, Pojazd, SpotUsage
+
 from rest_framework.response import Response
-from rest_framework import status
+
 from django.db.models import Q, F
 from rest_framework.decorators import api_view
 
+from django.views.decorators.csrf import csrf_exempt
+import json
 ''' HOME PAGE REQUESTS'''
 # views.py
 @api_view(['GET'])
@@ -275,7 +277,100 @@ def check_spot_availability(request, parking_id):
 
 def home(request):
     return render(request, 'parking_system/home.html')
-def login_signup(request):
-    return render(request, 'parking_system/login-signup.html')
+
+def signup_page(request):
+    return render(request, 'parking_system/signup.html')
+
+@csrf_exempt
+def signup(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            email = data.get('email')
+            phone = data.get('phone', 'unknown')
+            password = data.get('password')
+
+            # Check if email already exists
+            if Uzytkownik.objects.filter(email=email).exists():
+                return JsonResponse({"error": "Uzytkownik o podanym email istnieję."}, status=400)
+
+            # Create user
+            user = Uzytkownik(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone=phone,
+                password=password
+            )
+            user.save()
+            return JsonResponse({"message": "Dziękujemy za rejestracje w systemie."}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+def login_page(request):
+    return render(request, 'parking_system/login.html')
+
+@csrf_exempt
+def login_user(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            password = data.get('password')
+
+            user = Uzytkownik.objects.filter(email=email).first()
+            if user is None:
+                return JsonResponse({"error": "Nie znaleziono użytkownika o podanym email."}, status=400)
+
+            if user.password != password:
+                return JsonResponse({"error": "Niepoprawne hasło."}, status=400)
+
+            request.session['user_id'] = user.id # store user id w sesji
+            return JsonResponse({"message": "Zalogowano pomyślnie."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+def konto_page(request):
+    if 'user_id' not in request.session:  # wbudowane sprawdzenie czy logged in
+        return redirect(login_page) # moze tez byc redirect na /home w sumie
+    # render the Konto page/
+    user_id = request.session.get('user_id')
+    user = Uzytkownik.objects.get(id=user_id)
+    return render(request, 'parking_system/konto.html', {
+        'user': user,
+    })
+def logout(request):
+    if 'user_id' in request.session:
+        del request.session['user_id']
+    return redirect(login_page)
+def is_logged_in(request):
+    user_id = request.session.get('user_id')
+    if user_id:
+        try:
+            user = Uzytkownik.objects.get(pk=user_id)
+            return JsonResponse({
+                "logged_in": True,
+                "user_id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email
+            }, status=200)
+        except Uzytkownik.DoesNotExist:
+            return JsonResponse({"logged_in": False, "error": "Invalid user session."}, status=400) # user id w sesji nie == wpis w tabeli
+    else:
+        return JsonResponse({"logged_in": False}, status=200)
+
+from django.http import JsonResponse
+from django.shortcuts import redirect
+''' reservations '''
 
 

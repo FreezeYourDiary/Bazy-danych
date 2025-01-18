@@ -1,0 +1,47 @@
+{% extends "parking_system/navigate.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    <form id="login-form" onsubmit="event.preventDefault(); loginUser();" style="max-width: 500px; margin: auto;">
+        <label for="email" style="display: block; margin: 10px 0;">Email:</label>
+        <input type="email" id="email" name="email" placeholder="Wprowadź email" style="width: 100%; padding: 8px; margin-bottom: 10px;" required>
+        <label for="password" style="display: block; margin: 10px 0;">Hasło:</label>
+        <input type="password" id="password" name="password" placeholder="Wprowadź hasło" style="width: 100%; padding: 8px; margin-bottom: 20px;" required>
+        <button type="submit" class="button" style="width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">Zaloguj się</button>
+    </form>
+    <h1>Nie masz konta?</h1>
+    <a href="/signup/">Zarejestruj Się</a>
+
+    <script>
+        function loginUser() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const data = {
+                email: email,
+                password: password
+            };
+
+            fetch('/api/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    window.location.href = '/konto/';
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                alert('Błąd połączenia z serwerem');
+            });
+        }
+    </script>
+{% endblock %}

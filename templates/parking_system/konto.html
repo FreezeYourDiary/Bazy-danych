@@ -1,0 +1,52 @@
+{% extends "parking_system/navigate.html" %}
+
+{% block title %}Moje Konto{% endblock %}
+
+{% block content %}
+<h1>Witaj, {{ user.first_name }}!</h1>
+<p>Email: {{ user.email }}</p>
+<p>Telefon: {{ user.phone }}</p>
+
+<div class="panel">
+    <button class="dashboard-btn" id="createReservation">Stwórz Rezerwację</button>
+    <button class="dashboard-btn" id="checkReservations">Twoje Rezerwacje</button>
+    <button class="dashboard-btn" id="payReservation">Zapłać za Rezerwację</button>
+    <button class="dashboard-btn" id="cancelReservation">Anuluj Rezerwację</button>
+</div>
+<nav><a href="/logout/">Wyloguj się</a></nav>
+        <!-- tagi dla css -->
+<div id="panel" class="panel-content">
+</div>
+    <!-- bazowa strona uzytkownika Dalej to rozszerzyc -->
+<script>
+document.getElementById('createReservation').addEventListener('click', () => {
+    loadDashboardSection('/konto/reservations/', 'Stwórz rezerwację');
+});
+
+document.getElementById('checkReservations').addEventListener('click', () => {
+    loadDashboardSection('/konto/check-reservations/', 'Twoje rezerwacje');
+});
+
+document.getElementById('payReservation').addEventListener('click', () => {
+    loadDashboardSection('/konto/pay-for-reservation/', 'Zapłać za rezerwację');
+});
+
+document.getElementById('cancelReservation').addEventListener('click', () => {
+    loadDashboardSection('/konto/cancel-reservation/', 'Anuluj rezerwację');
+});
+
+function loadDashboardSection(url, title) {
+    const contentDiv = document.getElementById('dashboardContent');
+    contentDiv.innerHTML = '<p>Ładowanie...</p>';     <!-- test -->
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            contentDiv.innerHTML = `<h2>${title}</h2>` + html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            contentDiv.innerHTML = '<p>Wystąpił błąd podczas ładowania sekcji. Spróbuj ponownie.</p>';
+        });
+}
+</script>
+{% endblock %}
