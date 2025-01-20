@@ -123,7 +123,7 @@ def check_reservation_status(user_id):
     previous_res = Rezerwacja.objects.filter(uzytkownik_id=user_id).exists()
     paid_previous_res = Platnosc.objects.filter(
         rezerwacja__uzytkownik_id=user_id,
-        rezerwacja__status='oplacone'
+        rezerwacja__status='Oplacona'
     ).exists()
 
     if not previous_res:
@@ -137,7 +137,6 @@ def check_reservation_status(user_id):
 def update_user_info(user_id, name=None, lname=None, phone=None, mail=None, type=None):
     try:
         user = Uzytkownik.objects.get(id=user_id)
-
         if name:
             user.imie = name
         if lname:

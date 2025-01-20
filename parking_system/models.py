@@ -185,7 +185,7 @@ class Platnosc(models.Model):
 
 
 class Pojazd(models.Model):
-    pojazd = models.ForeignKey('SpotUsage', models.DO_NOTHING)
+    pojazd_id = models.CharField(max_length=64)
     uzytkownik = models.ForeignKey('Uzytkownik', models.DO_NOTHING)
 
     class Meta:

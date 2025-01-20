@@ -16,7 +16,19 @@
     <input type="email" id="email" name="email" placeholder="Wprowadź email" style="width: 100%; padding: 8px; margin-bottom: 10px;" required>
 
     <label for="phone" style="display: block; margin: 10px 0;">Telefon:</label>
-    <input type="text" id="phone" name="phone" placeholder="Wprowadź telefon" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    <div id="phone-input" style="display: flex; margin-bottom: 10px;">
+        <span style="padding: 8px; margin-right: 5px; font-size: 16px;">+48</span>
+        <!-- 9 inputs dla kazdej cyfry -->
+        <input type="text" maxlength="1" id="phone1" name="phone1" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone2')" onkeydown="moveBackFocus(event, this, 'phone1')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone2" name="phone2" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone3')" onkeydown="moveBackFocus(event, this, 'phone1')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone3" name="phone3" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone4')" onkeydown="moveBackFocus(event, this, 'phone2')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone4" name="phone4" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone5')" onkeydown="moveBackFocus(event, this, 'phone3')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone5" name="phone5" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone6')" onkeydown="moveBackFocus(event, this, 'phone4')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone6" name="phone6" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone7')" onkeydown="moveBackFocus(event, this, 'phone5')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone7" name="phone7" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone8')" onkeydown="moveBackFocus(event, this, 'phone6')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone8" name="phone8" style="width: 30px; text-align: center; padding: 8px; margin-right: 5px;" oninput="moveFocus(this, 'phone9')" onkeydown="moveBackFocus(event, this, 'phone7')" oninput="validateNumber(event)">
+        <input type="text" maxlength="1" id="phone9" name="phone9" style="width: 30px; text-align: center; padding: 8px;" required oninput="validateNumber(event)">
+    </div>
 
     <label for="password" style="display: block; margin: 10px 0;">Hasło:</label>
     <input type="password" id="password" name="password" placeholder="Wprowadź hasło" style="width: 100%; padding: 8px; margin-bottom: 20px;" required>
@@ -25,18 +37,30 @@
 </form>
 
 <script>
+// non numeric fix
+    function validateNumber(event) {
+        let value = event.target.value;
+        if (value && !/^\d$/.test(value)) {
+            event.target.value = '';
+        }
+    }
+
     function signupUser() {
         const firstName = document.getElementById('first_name').value;
         const lastName = document.getElementById('last_name').value;
         const email = document.getElementById('email').value;
-        const phone = document.getElementById('phone').value;
+        const phone = Array.from({ length: 9 }, (_, i) => document.getElementById(`phone${i + 1}`).value).join('');
         const password = document.getElementById('password').value;
+        if (phone.length !== 9) {
+            alert("Numer telefonu musi składać się z 9 cyfr.");
+            return;
+        }
 
         const userData = {
             first_name: firstName,
             last_name: lastName,
             email: email,
-            phone: phone,
+            phone: `+48${phone}`,
             password: password
         };
 
@@ -59,6 +83,17 @@
             alert('Error: ' + error);
         });
     }
+    // focus dla kazdej komorki w inpucie
+    function moveFocus(current, nextId) {
+        if (current.value.length === 1) {
+            document.getElementById(nextId).focus();
+        }
+    }
+    function moveBackFocus(event, current, previousId) {
+        if (event.key === 'Backspace' && current.value === '') {
+            document.getElementById(previousId).focus();
+        }
+    }
 </script>
-
+{% comment %}ew css for this{% endcomment %}
 {% endblock %}

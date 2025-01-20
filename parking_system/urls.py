@@ -25,4 +25,10 @@ urlpatterns = [
     path('konto/', views.konto_page, name='konto_page'),
     path('logout/', views.logout, name='logout'),
 
+    #user functionality
+    path('api/list-reservations', views.list_reservations_api, name='list-reservations-api'),
+    path('api/cancel-reservation/', views.cancel_reservation, name='cancel_reservation'),
+    path('api/pay-for-reservation/', views.pay_for_reservation, name='pay_for_reservation'),
+    path('api/create-reservation/', views.create_reservation, name='create_reservation'),
+    path('api/update-user-info/', views.update_user_info, name='update_user_info'),
 ]
