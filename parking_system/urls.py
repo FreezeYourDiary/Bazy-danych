@@ -31,4 +31,5 @@ urlpatterns = [
     path('api/pay-for-reservation/', views.pay_for_reservation, name='pay_for_reservation'),
     path('api/create-reservation/', views.create_reservation, name='create_reservation'),
     path('api/update-user-info/', views.update_user_info, name='update_user_info'),
+    path('api/get-user-info', views.get_user_info, name='get_user_info'),
 ]

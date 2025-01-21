@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_GET
 from rest_framework import status
 from .services import check_reservation_status, is_spot_available
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware
 from .models import ParkingSpot, Cennik, Rezerwacja, Platnosc, Site, Parking, Uzytkownik, Pojazd, SpotUsage
 from rest_framework.response import Response
 from django.db.models import Q, F
@@ -46,6 +46,9 @@ def available_parking_spots_with_filters(request, site_id):
 
         print(f"Filtered parking spots: {parkings}")
 
+        # pierwsze parking id by bylo response do create reservations
+        first_parking_id = parkings.first().id if parkings.exists() else None
+
         available_spots = ParkingSpot.objects.filter(parking__in=parkings, status="dostępne").count()
         prices = {}
         for parking in parkings:
@@ -54,11 +57,13 @@ def available_parking_spots_with_filters(request, site_id):
                 prices[parking.id] = cennik.cena
             except Cennik.DoesNotExist:
                 prices[parking.id] = "Cena niedostępna"
+
         if available_spots > 0:
             return Response({
                 "site_id": site_id,
                 "available_spots": available_spots,
-                "prices": prices
+                "prices": prices,
+                "filtered_parking_id": first_parking_id,
             })
         else:
             return Response({"message": "Brak dostępnych miejsc dla wybranych filtrów."}, status=404)
@@ -66,6 +71,7 @@ def available_parking_spots_with_filters(request, site_id):
         return Response({"message": "Nie znaleziono podanego parku."}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
 
 
 @api_view(['GET'])
@@ -417,7 +423,7 @@ def list_reservations_api(request):
             return JsonResponse({"reservations": reservation_list}, status=200)
         else:
             return JsonResponse(
-                {"message": f"No reservations found for user ID {user_id}."},
+                {"message": f"Brak rezerwacji dla uzytkownika {user_id}."},
                 status=404
             )
     except Uzytkownik.DoesNotExist:
@@ -498,6 +504,7 @@ def pay_for_reservation(request):
     }, status=status.HTTP_200_OK)
 
 
+
 @csrf_exempt
 @api_view(['POST'])
 def create_reservation(request):
@@ -509,28 +516,23 @@ def create_reservation(request):
         data = request.data
         parking_id = data.get("parking_id")
         vehicle_id = data.get("vehicle_id")
-        start_time = data.get("start_time")
         duration = data.get("duration")
-        if not all([parking_id, vehicle_id, start_time, duration]):
+
+        if not all([vehicle_id, duration]):
             return Response({"error": "Brak parametrow"}, status=400)
+        # jesli w request brak first id get it
+        first_parking_id = data.get("first_parking_id")
+        if first_parking_id:
+            parking_id = first_parking_id
 
-        from django.utils.timezone import make_aware
-        # conversion function
-        current_time = make_aware(datetime.now())
-
-        if start_time == "now":
-            start_time = current_time
-        else:
-            start_time = make_aware(datetime.fromisoformat(start_time))
-
-        # start_time? in the past
-        if start_time < current_time:
-            return Response({"error": "Rezerwujesz na przeszlosc"}, status=400)
-        #fix z wyszukiwaniem
+        # now time, needs fix with timezones
+        start_time = make_aware(datetime.now())
         end_time = start_time + timedelta(hours=int(duration))
+
         spot = is_spot_available(parking_id)
         if not spot:
             return Response({"error": "Brak dostepnych miejsc"}, status=404)
+
         try:
             pricing = Cennik.objects.get(parking_id=parking_id)
             total_price = pricing.cena * int(duration)
@@ -549,6 +551,7 @@ def create_reservation(request):
         )
 
         ParkingSpot.objects.filter(id=spot.id).update(status="Zablokowane")
+
         SpotUsage.objects.create(
             id=vehicle_id,
             parking_id=parking_id,
@@ -578,28 +581,57 @@ def create_reservation(request):
         return Response({"error": str(e)}, status=500)
 
 
+@login_required
+def get_user_info(request):
+    try:
+        user_id = request.session.get('user_id')
+        user = Uzytkownik.objects.get(id=user_id)
+        user_info = {
+            'name': user.first_name,
+            'lname': user.last_name,
+            'phone': user.phone,
+            'mail': user.email,
+            'type': user.user_type,
+            'password': user.password
+        }
+        return JsonResponse(user_info, status=200)
+    except Uzytkownik.DoesNotExist:
+        return JsonResponse({'error': 'nie znaleziono uzytkownika'}, status=404)
+
+
 @csrf_exempt
 def update_user_info(request):
     if request.method == 'POST':
         try:
+            user_id = request.session.get('user_id')
+            user = Uzytkownik.objects.get(id=user_id)# id from current section
             data = json.loads(request.body)
-            user_id = request.user.id
             name = data.get('name')
             lname = data.get('lname')
             phone = data.get('phone')
             mail = data.get('mail')
-            type = data.get('type')
+            user_type = data.get('type')
+            password = data.get('password')
 
-            update_user_info(user_id, name, lname, phone, mail, type)
+            updated = update_user_info_in_db(user_id, name, lname, phone, mail, user_type, password)
 
-            return JsonResponse({'message': 'Success'}, status=200)
+            if updated:
+                return JsonResponse({'message': 'zaktualizowano!'}, status=200)
+            else:
+                return JsonResponse({'error': 'Brak aktualizacji info o uzytkowniku!'}, status=400)
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
+    return JsonResponse({'error': 'Tylko Metoda POST'}, status=405)
 
-def update_user_info(user_id, name=None, lname=None, phone=None, mail=None, type=None):
+
+def update_user_info_in_db(user_id, name=None, lname=None, phone=None, mail=None, user_type=None, password=None):
     try:
+        # Fetch the user from the database
         user = Uzytkownik.objects.get(id=user_id)
+
+        # Update user fields
         if name:
             user.imie = name
         if lname:
@@ -608,11 +640,17 @@ def update_user_info(user_id, name=None, lname=None, phone=None, mail=None, type
             user.telefon = phone
         if mail:
             user.email = mail
-        if type:
-            user.typ = type
+        if password:
+            user.password = password
+
+        user.typ = 'default'  # Enforcing 'default'
+
         user.save()
-        print(f"{user_id} info updated.")
+        print(f"{user_id} zaktualizowano")
+        return True
     except Uzytkownik.DoesNotExist:
-        print(f"{user_id} not found.")
+        print(f" {user_id} nie znaleziono")
+        return False
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error updating user: {e}")
+        return False

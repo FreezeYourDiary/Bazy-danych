@@ -3,153 +3,316 @@
 {% block title %}Moje Konto{% endblock %}
 
 {% block content %}
-<h1>Witaj, {{ user.first_name }}!</h1>
+    <h1>Witaj, {{ user.first_name }}!</h1>
 
-<div class="panel">
-    <button class="dashboard-btn" id="createReservationToggle">Stwórz Rezerwację</button>
-    <button class="dashboard-btn" id="checkReservations">Twoje Rezerwacje</button>
-</div>
-<nav><a href="/logout/">Wyloguj się</a></nav>
-
-<div id="createReservationBox" class="hidden">
-    <h2>Tworzenie Rezerwacji</h2>
-    <form id="createReservationForm">
-        <!-- inputy dla rezerwacji, dodac filtry -->
-        <label for="searchInput">Wyszukaj parking</label>
-        <input type="text" id="searchInput" placeholder="Wyszukaj parking..." required />
-        <div id="suggestions" class="suggestions-list"></div>
-
-        <label for="startTime">Czas rozpoczęcia</label>
-        <input type="datetime-local" id="startTime" required />
-
-        <label for="duration">Czas trwania (godziny)</label>
-        <input type="number" id="duration" required min="1" />
-
-        <label for="vehicleNumber">Numer rejestracyjny pojazdu</label>
-        <input type="text" id="vehicleNumber" required />
-
-        <div id="statusMessage"></div>
-        <button type="button" id="checkAvailabilityButton" class="dashboard-btn">Sprawdź dostępność</button>
-        <div id="reservationDetails" class="hidden">
-            <button type="button" id="createReservationBtn" class="dashboard-btn">Zatwierdź Rezerwację</button>
-        </div>
-    </form>
-</div>
-
-<div id="reservationsBox" class="hidden">
-    <h2>Twoje Rezerwacje</h2>
-    <div id="reservations-container">
-        <p>Ładowanie rezerwacji...</p>
+    <div class="panel">
+        <button class="dashboard-btn" id="createReservationToggle">Stwórz Rezerwację</button>
+        <button class="dashboard-btn" id="checkReservations">Twoje Rezerwacje</button>
+        <button class="dashboard-btn" id="updateUserInfoToggle">Aktualizuj Informacje</button>
     </div>
-</div>
+    <nav><a href="/logout/">Wyloguj się</a></nav>
 
-<script>
-document.getElementById('createReservationToggle').addEventListener('click', toggleCreateReservationForm);
-document.getElementById('checkReservations').addEventListener('click', toggleReservations);
-document.getElementById('checkAvailabilityButton').addEventListener('click', checkAvailability);
+    <div id="createReservationBox" class="hidden">
+        <h2>Tworzenie Rezerwacji</h2>
+        <form id="createReservationForm">
+            <!-- inputy dla rezerwacji, dodac filtry -->
+            <label for="searchInput">Wyszukaj parking</label>
+            <input type="text" id="searchInput" placeholder="Wyszukaj parking..." required/>
+            <div id="suggestions" class="suggestions-list"></div>
 
-function toggleCreateReservationForm() {
-    const formBox = document.getElementById('createReservationBox');
-    const reservationsBox = document.getElementById('reservationsBox');
-    //visibility settings
-    formBox.classList.toggle('hidden');
-    if (!formBox.classList.contains('hidden')) {
-        reservationsBox.classList.add('hidden');
-    }
-}
+            <label for="duration">Czas trwania (godziny)</label>
+            <input type="number" id="duration" required min="1"/>
 
-function toggleReservations() {
-    const reservationsBox = document.getElementById('reservationsBox');
-    const container = document.getElementById('reservations-container');
+            <label for="vehicleNumber">Numer rejestracyjny pojazdu</label>
+            <input type="text" id="vehicleNumber" required/>
 
-    if (reservationsBox.classList.contains('hidden')) {
-        reservationsBox.classList.remove('hidden');
-        fetchReservations(); // update gdy shown
-    } else {
-        reservationsBox.classList.add('hidden');
-    }
-    const formBox = document.getElementById('createReservationBox');
-    formBox.classList.add('hidden');
-}
-document.getElementById('createReservationBtn').addEventListener('click', createReservation);
+            <div id="statusMessage"></div>
+            <button type="button" id="checkAvailabilityButton" class="dashboard-btn">Sprawdź dostępność</button>
+            <div id="reservationDetails" class="hidden">
+                <button type="button" id="createReservationBtn" class="dashboard-btn">Zatwierdź Rezerwację</button>
+            </div>
+        </form>
+    </div>
 
-async function createReservation() {
-    const parkingId = selectedSiteId; // parking id od menu dropdown
-    const startTime = document.getElementById('startTime').value;
-    const duration = document.getElementById('duration').value;
-    const vehicleNumber = document.getElementById('vehicleNumber').value;
-    if (!parkingId || !startTime || !duration || !vehicleNumber) {
-        alert("Proszę wypełnić wszystkie pola!");
-        return;
-    }
+    <div id="reservationsBox" class="hidden">
+        <h2>Twoje Rezerwacje</h2>
+        <div id="reservations-container">
+            <p>Ładowanie rezerwacji...</p>
+        </div>
+    </div>
+    <div id="updateUserInfoBox" class="hidden">
+        <h2>Aktualizacja danych</h2>
+        <form id="updateUserInfo" method="POST">
+            <input type="text" id="name" name="name" placeholder="Name" readonly><br>
+            <input type="text" id="lname" name="lname" placeholder="Last Name" readonly><br>
+            <input type="text" id="phone" name="phone" placeholder="Phone" readonly><br>
+            <input type="email" id="mail" name="mail" placeholder="Email" required><br>
+            <input type="password" id="password" name="password" placeholder="Password" required><br>
+            <button type="button" id="submitUpdateUserInfo">Zapisz Zmiany</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Existing form elements
+            const form = document.getElementById('updateUserInfo');
+            const nameInput = document.getElementById('name');
+            const lnameInput = document.getElementById('lname');
+            const phoneInput = document.getElementById('phone');
+            const mailInput = document.getElementById('mail');
+            const passwordInput = document.getElementById('password');
+            const submitButton = document.getElementById('submitUpdateUserInfo');
 
-    try {
-        const response = await fetch('/api/create-reservation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify({
-                parking_id: parkingId,
-                start_time: startTime,
-                duration: duration,
-                vehicle_id: vehicleNumber,
-            }),
+            // Add toggle functionality for update form
+            document.getElementById('updateUserInfoToggle').addEventListener('click', function() {
+                const updateBox = document.getElementById('updateUserInfoBox');
+                const reservationsBox = document.getElementById('reservationsBox');
+                const createReservationBox = document.getElementById('createReservationBox');
+
+                updateBox.classList.toggle('hidden');
+                reservationsBox.classList.add('hidden');
+                createReservationBox.classList.add('hidden');
+
+                if (!updateBox.classList.contains('hidden')) {
+                    loadUserInfo();
+                }
+            });
+
+            // Function to load user info from backend
+            async function loadUserInfo() {
+                try {
+                    const response = await fetch('/api/get-user-info', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const userData = await response.json();
+
+                    // Populate form fields
+                    nameInput.value = userData.name || '';
+                    lnameInput.value = userData.lname || '';
+                    phoneInput.value = userData.phone || '';
+                    mailInput.value = userData.mail || '';
+                    passwordInput.value = userData.password || '';
+
+                    // Store original values for comparison
+                    form.dataset.originalData = JSON.stringify(userData);
+
+                    return userData;
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                    showNotification('Error loading user data.', 'error');
+                }
+            }
+
+            // Function to update user info
+            async function updateUserInfo(formData) {
+                try {
+                    const response = await fetch('/api/update-user-info/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            name: formData.get('name'),
+                            lname: formData.get('lname'),
+                            phone: formData.get('phone'),
+                            mail: formData.get('mail'),
+                            type: 'default',  // set w backendzie
+                            password: formData.get('password')
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    showNotification('Dane zaktualizowano!', 'success');
+
+
+                    const newData = {
+                        name: formData.get('name'),
+                        lname: formData.get('lname'),
+                        phone: formData.get('phone'),
+                        mail: formData.get('mail'),
+                        password: formData.get('password')
+                    };
+                    form.dataset.originalData = JSON.stringify(newData);
+
+                    return result;
+                } catch (error) {
+                    console.error('Blad w aktualizacji danych uzytkownika:', error);
+                    showNotification('Blad w aktualizacji danych uzytkownika.', 'error');
+                }
+            }
+            // notifykacje, mozna tez oknem, ale ciekawy funkcjonal
+            function showNotification(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+
+                document.body.appendChild(notification);
+                // 3 sekundy
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            function hasFormChanged() {
+                if (!form.dataset.originalData) return false;
+
+                const originalData = JSON.parse(form.dataset.originalData);
+                const currentData = {
+                    name: nameInput.value,
+                    lname: lnameInput.value,
+                    phone: phoneInput.value,
+                    mail: mailInput.value,
+                    password: passwordInput.value
+                };
+
+                return JSON.stringify(originalData) !== JSON.stringify(currentData);
+            }
+
+            // form submission, w formie juz masz dane uzytkownika
+            submitButton.addEventListener('click', async function (e) {
+                e.preventDefault();
+
+                if (!hasFormChanged()) {
+                    showNotification('Brak zmian', 'info');
+                    return;
+                }
+
+                const formData = new FormData(form);
+                await updateUserInfo(formData);
+            });
+
+            loadUserInfo();
+
+            const inputs = [nameInput, lnameInput, phoneInput, mailInput];
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    submitButton.disabled = !hasFormChanged();
+                });
+            });
         });
+        document.getElementById('createReservationToggle').addEventListener('click', toggleCreateReservationForm);
+        document.getElementById('checkReservations').addEventListener('click', toggleReservations);
+        document.getElementById('checkAvailabilityButton').addEventListener('click', checkAvailability);
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            alert(errorData.error || "Wystąpił błąd podczas tworzenia rezerwacji.");
-            return;
-        }
-
-        const data = await response.json();
-        alert(data.message || "Rezerwacja została pomyślnie utworzona!");
-        // reload or redirect
-        toggleCreateReservationForm();
-        fetchReservations();
-    } catch (error) {
-        console.error("Błąd podczas tworzenia rezerwacji:", error);
-        alert("Wystąpił błąd podczas tworzenia rezerwacji. Spróbuj ponownie później.");
-    }
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+        function toggleCreateReservationForm() {
+            const formBox = document.getElementById('createReservationBox');
+            const reservationsBox = document.getElementById('reservationsBox');
+            const updateBox = document.getElementById('updateUserInfoBox');
+            //visibility settings
+            formBox.classList.toggle('hidden');
+            if (!formBox.classList.contains('hidden')) {
+                reservationsBox.classList.add('hidden');
+                updateBox.classList.add('hidden');
             }
         }
-    }
-    return cookieValue;
-}
 
-async function fetchReservations() {
-    const container = document.getElementById('reservations-container');
-    container.innerHTML = '<p>Ładowanie rezerwacji...</p>';
-
-    try {
-        const response = await fetch('/api/list-reservations');
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+        function toggleReservations() {
+            const reservationsBox = document.getElementById('reservationsBox');
+            const container = document.getElementById('reservations-container');
+            const updateBox = document.getElementById('updateUserInfoBox');
+            if (reservationsBox.classList.contains('hidden')) {
+                reservationsBox.classList.remove('hidden');
+                fetchReservations(); // update gdy shown
+            } else {
+                reservationsBox.classList.add('hidden');
+            }
+            const formBox = document.getElementById('createReservationBox');
+            formBox.classList.add('hidden');
+            updateBox.classList.add('hidden');
         }
-        const data = await response.json();
 
-        if (data.reservations && data.reservations.length > 0) {
-            container.innerHTML = '';
-            data.reservations.forEach(reservation => {
-                const reservationDiv = document.createElement('div');
-                reservationDiv.className = 'reservation-card';
-                // canceled or paid fix
-                const isPaidOrCancelled = reservation.status === 'Oplacona' || reservation.status === 'Anulowana';
+        document.getElementById('createReservationBtn').addEventListener('click', createReservation);
 
-                reservationDiv.innerHTML = `
+        async function createReservation() {
+            const parkingId = selectedSiteId; // parking id od menu dropdown
+            const duration = document.getElementById('duration').value;
+            const vehicleNumber = document.getElementById('vehicleNumber').value;
+
+            if (!parkingId || !duration || !vehicleNumber) {
+                alert("Proszę wypełnić wszystkie pola!");
+                return;
+            }
+
+            const startTime = new Date().toISOString();  // Get the current time in ISO format
+
+            try {
+                const response = await fetch('/api/create-reservation/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        parking_id: parkingId,
+                        start_time: startTime,
+                        duration: duration,
+                        vehicle_id: vehicleNumber,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    alert(errorData.error || "Wystąpił błąd podczas tworzenia rezerwacji.");
+                    return;
+                }
+
+                const data = await response.json();
+                alert(data.message || "Rezerwacja została pomyślnie utworzona!");
+                // reload or redirect
+                toggleCreateReservationForm();
+                fetchReservations();
+            } catch (error) {
+                console.error("Błąd podczas tworzenia rezerwacji:", error);
+                alert("Wystąpił błąd podczas tworzenia rezerwacji. Spróbuj ponownie później.");
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function fetchReservations() {
+            const container = document.getElementById('reservations-container');
+            container.innerHTML = '<p>Ładowanie rezerwacji...</p>';
+
+            try {
+                const response = await fetch('/api/list-reservations');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.reservations && data.reservations.length > 0) {
+                    container.innerHTML = '';
+                    data.reservations.forEach(reservation => {
+                        const reservationDiv = document.createElement('div');
+                        reservationDiv.className = 'reservation-card';
+                        // canceled or paid fix
+                        const isPaidOrCancelled = reservation.status === 'Oplacona' || reservation.status === 'Anulowana';
+
+                        reservationDiv.innerHTML = `
                     <p><strong>ID Rezerwacji:</strong> ${reservation.reservation_id}</p>
                     <p><strong>ID Parkingu:</strong> ${reservation.parking_id}</p>
                     <p><strong>ID Miejsca:</strong> ${reservation.spot_id}</p>
@@ -158,266 +321,328 @@ async function fetchReservations() {
                     <p><strong>Status:</strong> ${reservation.status}</p>
                     <p><strong>Cena:</strong> ${reservation.price.toFixed(2)} PLN</p>
                     ${
-                        !isPaidOrCancelled
-                            ? `
+                            !isPaidOrCancelled
+                                ? `
 
                     <div class="payment-section" id="payment-section-${reservation.reservation_id}">
                         <input type="number" id="payment-amount-${reservation.reservation_id}" placeholder="Kwota do zapłaty" />
                         <button class="pay-btn" data-reservation-id="${reservation.reservation_id}" data-price="${reservation.price}">Zapłać</button>
                         <button class="cancel-btn" data-reservation-id="${reservation.reservation_id}">Anuluj Rezerwację</button>
                     </div>`
-                            : ''
-                    }
+                                : ''
+                        }
                     <hr>
                 `;
-                container.appendChild(reservationDiv);
+                        container.appendChild(reservationDiv);
 
-                if (!isPaidOrCancelled) {
-                    document.querySelectorAll('.cancel-btn').forEach(button => {
-                        const clonedButton = button.cloneNode(true);
-                        button.replaceWith(clonedButton); // -stare
-                        clonedButton.addEventListener('click', async (event) => {
-                            const reservationId = event.target.getAttribute('data-reservation-id');
-                            await cancelReservation(reservationId);
-                        });
-                    });
+                        if (!isPaidOrCancelled) {
+                            document.querySelectorAll('.cancel-btn').forEach(button => {
+                                const clonedButton = button.cloneNode(true);
+                                button.replaceWith(clonedButton); // -stare
+                                clonedButton.addEventListener('click', async (event) => {
+                                    const reservationId = event.target.getAttribute('data-reservation-id');
+                                    await cancelReservation(reservationId);
+                                });
+                            });
 
-                    document.querySelectorAll('.pay-btn').forEach(button => {
-                        const clonedButton = button.cloneNode(true);
-                        button.replaceWith(clonedButton);
-                        clonedButton.addEventListener('click', async (event) => {
-                            const reservationId = event.target.getAttribute('data-reservation-id');
-                            const paymentAmount = document.getElementById(`payment-amount-${reservationId}`).value;
-                            if (paymentAmount) {
-                                await payForReservation(reservationId, paymentAmount);
-                            } else {
-                                alert('Proszę podać kwotę.');
-                            }
-                        });
+                            document.querySelectorAll('.pay-btn').forEach(button => {
+                                const clonedButton = button.cloneNode(true);
+                                button.replaceWith(clonedButton);
+                                clonedButton.addEventListener('click', async (event) => {
+                                    const reservationId = event.target.getAttribute('data-reservation-id');
+                                    const paymentAmount = document.getElementById(`payment-amount-${reservationId}`).value;
+                                    if (paymentAmount) {
+                                        await payForReservation(reservationId, paymentAmount);
+                                    } else {
+                                        alert('Proszę podać kwotę.');
+                                    }
+                                });
+                            });
+                        }
                     });
+                } else {
+                    container.innerHTML = '<p>Nie znaleziono żadnych rezerwacji.</p>';
                 }
-            });
-        } else {
-            container.innerHTML = '<p>Nie znaleziono żadnych rezerwacji.</p>';
-        }
-    } catch (error) {
-        console.error('Błąd podczas ładowania rezerwacji:', error);
-        container.innerHTML = '<p>Wystąpił błąd podczas ładowania rezerwacji. Spróbuj ponownie później.</p>';
-    }
-}
-
-async function cancelReservation(reservationId) {
-    const container = document.getElementById('reservations-container');
-
-    try {
-        const response = await fetch('/api/cancel-reservation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify({ reservation_id: reservationId })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        alert(data.message);
-
-        fetchReservations();
-    } catch (error) {
-        console.error('Błąd podczas anulowania rezerwacji:', error);
-        alert('Wystąpił błąd podczas anulowania rezerwacji. Spróbuj ponownie później.');
-    }
-}
-
-async function payForReservation(reservationId, paymentAmount) {
-    try {
-        const response = await fetch('/api/pay-for-reservation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify({ reservation_id: reservationId, payment_amount: paymentAmount }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const data = await response.json();
-        alert(data.message);
-        fetchReservations();
-    } catch (error) {
-        console.error('Błąd podczas płatności:', error);
-        alert('Wystąpił błąd podczas płatności. Spróbuj ponownie później.');
-    }
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+            } catch (error) {
+                console.error('Błąd podczas ładowania rezerwacji:', error);
+                container.innerHTML = '<p>Wystąpił błąd podczas ładowania rezerwacji. Spróbuj ponownie później.</p>';
             }
         }
-    }
-    return cookieValue;
-}
 
-let selectedSiteId = null;
-document.getElementById('searchInput').addEventListener('input', async () => {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) {
-        document.getElementById('suggestions').innerHTML = '';
-        return;
-    }
-    try {
-        const response = await fetch(`/api/autocomplete-sites/?query=${encodeURIComponent(query)}`);
-        const data = await response.json();
+        async function cancelReservation(reservationId) {
+            const container = document.getElementById('reservations-container');
 
-        if (data.results && data.results.length > 0) {
-            document.getElementById('suggestions').innerHTML = data.results
-                .map(site => `
+            try {
+                const response = await fetch('/api/cancel-reservation/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({reservation_id: reservationId})
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                alert(data.message);
+
+                fetchReservations();
+            } catch (error) {
+                console.error('Błąd podczas anulowania rezerwacji:', error);
+                alert('Wystąpił błąd podczas anulowania rezerwacji. Spróbuj ponownie później.');
+            }
+        }
+
+        async function payForReservation(reservationId, paymentAmount) {
+            try {
+                const response = await fetch('/api/pay-for-reservation/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({reservation_id: reservationId, payment_amount: paymentAmount}),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                alert(data.message);
+                fetchReservations();
+            } catch (error) {
+                console.error('Błąd podczas płatności:', error);
+                alert('Wystąpił błąd podczas płatności. Spróbuj ponownie później.');
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        let selectedSiteId = null;
+        document.getElementById('searchInput').addEventListener('input', async () => {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                document.getElementById('suggestions').innerHTML = '';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/autocomplete-sites/?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    document.getElementById('suggestions').innerHTML = data.results
+                        .map(site => `
                     <div class="autocomplete-suggestion" onclick="selectSuggestion(${site.id}, '${site.nazwa}')">
                         ${site.nazwa} - ${site.ulica || ''} (${site.kod_pocztowy || ''})
                     </div>
                 `).join('');
-        } else {
-            document.getElementById('suggestions').innerHTML = '<div class="autocomplete-suggestion">Brak wyników</div>';
+                } else {
+                    document.getElementById('suggestions').innerHTML = '<div class="autocomplete-suggestion">Brak wyników</div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('suggestions').innerHTML = '<div class="autocomplete-suggestion">Błąd serwera</div>';
+            }
+        });
+
+        function selectSuggestion(id, nazwa) {
+            selectedSiteId = id;
+            document.getElementById('searchInput').value = `${nazwa}`;
+            document.getElementById('suggestions').innerHTML = '';
         }
-    } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('suggestions').innerHTML = '<div class="autocomplete-suggestion">Błąd serwera</div>';
-    }
-});
 
-function selectSuggestion(id, nazwa) {
-    selectedSiteId = id;
-    document.getElementById('searchInput').value = `${nazwa}`;
-    document.getElementById('suggestions').innerHTML = '';
-}
+        async function checkAvailability() {
+            document.getElementById('statusMessage').style.display = 'block';
+            if (!selectedSiteId) {
+                alert('Wybierz parking z listy!');
+                document.getElementById('statusMessage').style.display = 'none';
+                return;
+            }
 
-async function checkAvailability() {
-    document.getElementById('statusMessage').style.display = 'block';
-    if (!selectedSiteId) {
-        alert('Wybierz parking z listy!');
-        document.getElementById('statusMessage').style.display = 'none';
-        return;
-    }
+            try {
+                const response = await fetch(`/api/available-parking-spots-with-filters/${selectedSiteId}`);
+                const data = await response.json();
 
-    try {
-        const response = await fetch(`/api/available-parking-spots-with-filters/${selectedSiteId}`);
-        const data = await response.json();
-
-        if (response.ok && data.available_spots > 0) {
-            document.getElementById('statusMessage').textContent = `Dostępne miejsca: ${data.available_spots}`;
-            document.getElementById('reservationDetails').classList.remove('hidden');
-        } else {
-            document.getElementById('statusMessage').textContent = 'Brak dostępnych miejsc!';
-            document.getElementById('reservationDetails').classList.add('hidden');
+                if (response.ok && data.available_spots > 0) {
+                    document.getElementById('statusMessage').textContent = `Dostępne miejsca: ${data.available_spots}`;
+                    document.getElementById('reservationDetails').classList.remove('hidden');
+                } else {
+                    document.getElementById('statusMessage').textContent = 'Brak dostępnych miejsc!';
+                    document.getElementById('reservationDetails').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Błąd:', error);
+                document.getElementById('statusMessage').textContent = 'Błąd sprawdzania dostępności.';
+            }
         }
-    } catch (error) {
-        console.error('Błąd:', error);
-        document.getElementById('statusMessage').textContent = 'Błąd sprawdzania dostępności.';
+    </script>
+
+
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        #reservationsBox, #createReservationBox, #updateUserInfoBox {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .dashboard-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #1b7d40;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .dashboard-btn:hover {
+            background-color: #1b7d40;
+        }
+
+        .payment-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .payment-section input {
+            width: 94%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .payment-section button {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #1b7d40;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        .payment-section button.cancel-btn {
+            background-color: #dc3545;
+        }
+
+        .payment-section button:hover {
+            opacity: 0.9;
+        }
+
+ #updateUserInfoBox {
+        max-width: 500px;
+        margin: 20px auto;
     }
-}
-</script>
+
+    #updateUserInfoBox h2 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        text-align: center;
+        color: #333;
+    }
+
+    #updateUserInfo input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #updateUserInfo input[readonly] {
+        background-color: #f5f5f5;
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    #submitUpdateUserInfo {
+        width: 100%;
+        padding: 10px;
+        font-size: 14px;
+        border-radius: 4px;
+        background-color: #1b7d40;
+        color: white;
+        cursor: pointer;
+        border: none;
+        transition: background-color 0.3s ease;
+    }
+
+    #submitUpdateUserInfo:hover {
+        opacity: 0.9;
+    }
+
+    #submitUpdateUserInfo:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
 
 
-<style>
-.hidden {
-    display: none;
-}
+        #createReservationBox h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #333;
+        }
 
-#reservationsBox, #createReservationBox {
-    margin-top: 20px;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    background-color: #f9f9f9;
-}
+        #createReservationForm input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
 
-.dashboard-btn {
-    margin-top: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: #1b7d40;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-.dashboard-btn:hover {
-    background-color: #1b7d40;
-}
-.payment-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 300px;
-  margin: 20px auto;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-.payment-section input {
-  width: 94%;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #fff;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.payment-section button {
-  width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.payment-section button {
-  background-color: #1b7d40;
-  color: white;
-  cursor: pointer;
-  border: none;
-}
-
-.payment-section button.cancel-btn {
-  background-color: #dc3545;
-}
-
-.payment-section button:hover {
-  opacity: 0.9;
-}
-#createReservationBox h2 {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
-  text-align: center;
-  color: #333;
-}
-#createReservationForm input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-</style>
+        #updateUserInfoForm input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+    </style>
 
 {% endblock %}
