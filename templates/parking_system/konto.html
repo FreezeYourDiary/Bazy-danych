@@ -310,7 +310,7 @@
                         const reservationDiv = document.createElement('div');
                         reservationDiv.className = 'reservation-card';
                         // canceled or paid fix
-                        const isPaidOrCancelled = reservation.status === 'Oplacona' || reservation.status === 'Anulowana';
+                        const isPaidOrCancelled = reservation.status === 'Oplacona' || reservation.status === 'Anulowana' || reservation.status === 'Wygasła';
 
                         reservationDiv.innerHTML = `
                     <p><strong>ID Rezerwacji:</strong> ${reservation.reservation_id}</p>
@@ -420,7 +420,7 @@
             }
         }
 
-        function getCookie(name) {
+        {% comment %}function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
@@ -433,7 +433,7 @@
                 }
             }
             return cookieValue;
-        }
+        }{% endcomment %}
 
         let selectedSiteId = null;
         document.getElementById('searchInput').addEventListener('input', async () => {

@@ -119,19 +119,20 @@ def cancel_reservation(reservation_id):
     except Rezerwacja.DoesNotExist:
         print(f"Nie istnieje rezerwacji {reservation_id}.")
 
+
 def check_reservation_status(user_id):
-    previous_res = Rezerwacja.objects.filter(uzytkownik_id=user_id).exists()
-    paid_previous_res = Platnosc.objects.filter(
-        rezerwacja__uzytkownik_id=user_id,
-        rezerwacja__status='Oplacona'
+    # fix do 'Zarezerwowana'
+    unpaid_reservation = Rezerwacja.objects.filter(
+        uzytkownik_id=user_id,
+        status='Zarezerwowana',
     ).exists()
 
-    if not previous_res:
-        return 'Użytkownik może zarezerwować, brak wcześniejszych rezerwacji'
-    elif paid_previous_res:
-        return 'Użytkownik może zarezerwować'
+    if unpaid_reservation:
+        return 'Użytkownik nie może zarezerwować, ma nieopłaconą rezerwację'
     else:
-        return 'Użytkownik nie może zarezerwować, nie opłacono poprzedniej rezerwacji'
+        return 'Użytkownik może zarezerwować'
+
+
 
 # Example usage
 def update_user_info(user_id, name=None, lname=None, phone=None, mail=None, type=None):

@@ -8,12 +8,9 @@ urlpatterns = [
     path('api/search-parking/', views.search_parking, name='search_parking'),
     path('api/autocomplete-sites/', views.autocomplete_sites, name='autocomplete_sites'),
 
-    path('api/parking/<int:site_id>/update_details/', views.update_parking_details, name='update_parking_details'),
-    path('api/parking/<int:site_id>/update_owner/', views.update_parking_owner, name='update_parking_owner'),
-    path('api/parking/<int:parking_id>/update_price/', views.update_parking_price, name='update_parking_price'),
-    path('api/reservations/', views.reservations, name='reservations'),
-    path('api/earnings/statistics/', views.earnings_statistics, name='earnings_statistics'),
-    path('api/user/<int:user_id>/statistics/', views.user_statistics, name='user_statistics'),
+    # path('api/parking/<int:site_id>/update_details/', views.update_parking_details, name='update_parking_details'),
+    # path('api/reservations/', views.reservations, name='reservations'),
+    # path('api/user/<int:user_id>/statistics/', views.user_statistics, name='user_statistics'),
 
     path('signup/', views.signup_page, name='signup_page'),
     path('signup-action/', views.signup, name='signup'),  # test
@@ -32,4 +29,10 @@ urlpatterns = [
     path('api/create-reservation/', views.create_reservation, name='create_reservation'),
     path('api/update-user-info/', views.update_user_info, name='update_user_info'),
     path('api/get-user-info', views.get_user_info, name='get_user_info'),
+
+    #admin functionality
+    path('api/update-parking-owner/<int:site_id>/', views.update_parking_owner, name='update_parking_owner'),
+    path('admin-page/', views.admin, name='admin'),
+    path('api/update-parking-price/<int:parking_id>/', views.update_parking_price, name='update_parking_price'),
+    path('api/earnings/statistics/', views.earnings_statistics, name='earnings_statistics'),
 ]

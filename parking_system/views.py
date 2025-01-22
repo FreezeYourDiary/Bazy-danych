@@ -143,7 +143,7 @@ def update_parking_details(request, site_id):
             "message": f"Nie zmieniono detale parkingu ID {site_id}."
         })
 
-
+@csrf_exempt
 @api_view(['POST'])
 def update_parking_owner(request, site_id):
     """
@@ -172,6 +172,7 @@ def update_parking_owner(request, site_id):
         })
 
 
+@csrf_exempt
 @api_view(['POST'])
 def update_parking_price(request, parking_id):
     """
@@ -190,7 +191,7 @@ def update_parking_price(request, parking_id):
     if result:
         return Response({
             "status": "success",
-            "message": f"Zmieniono rate za strefę ID {parking_id}: Nowa cena {new_price}.",
+            "message": f"Zmieniono rate za parking ID {parking_id}: Nowa cena {new_price}.",
             "updated_rows": result
         })
     else:
@@ -237,9 +238,6 @@ def reservations(request):
             "status": "error",
             "message": f"Brak rezerwacji o {status}."
         })
-
-
-from rest_framework.decorators import api_view
 
 
 @api_view(['GET'])
@@ -300,7 +298,8 @@ def home(request):
 def signup_page(request):
     return render(request, 'parking_system/signup.html')
 
-
+def admin(request):
+    return render(request, 'parking_system/admin.html')
 @csrf_exempt
 def signup(request):
     if request.method == 'POST':
@@ -368,6 +367,8 @@ def konto_page(request):
     # render the Konto page/
     user_id = request.session.get('user_id')
     user = Uzytkownik.objects.get(id=user_id)
+    if user.user_type == "Admin":
+        return redirect(admin)
     return render(request, 'parking_system/konto.html', {
         'user': user,
     })
@@ -512,6 +513,10 @@ def create_reservation(request):
         user_id = request.session.get('user_id')
         if not user_id:
             return Response({"error": "Nie jestes zalogowany"}, status=401)
+
+        status_message = check_reservation_status(user_id)
+        if 'nie może zarezerwować' in status_message:
+            return Response({"error": status_message}, status=403)
 
         data = request.data
         parking_id = data.get("parking_id")

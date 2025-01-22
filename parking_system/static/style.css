@@ -117,14 +117,14 @@ nav {
     background-color: #1b7d40;
     padding: 10px 20px;
     display: flex;
-    justify-content: space-between; /* The justify-content property aligns the flexible container's items when the items do not use all available space on the main-axis (horizontally). */
-    align-items: center; /* vertically */
+    justify-content: space-between;
+    align-items: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 nav a {
     color: white;
-    text-decoration: none; /* - underline */
+    text-decoration: none;
     margin-right: 20px;
     font-weight: bold;
     font-size: 16px;
